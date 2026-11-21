@@ -1,199 +1,96 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title></title>
+<title> </title>
 <style>
-  :root {
-    box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    color-scheme: dark;
-  }
-
-  html, body {
-    height: 100%;
-    margin: 0;
-    background: #000;
-    overflow: hidden;
-  }
-
-  body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: default;
-  }
-
-  #stage {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 36px 72px;
-    max-width: 900px;
-    padding: 24px;
-  }
-
+  :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); color-scheme: dark; }
+  html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; cursor: default; }
+  #stage { display: flex; flex-wrap: wrap; justify-content: center; gap: 36px 72px; max-width: 900px; padding: 24px; }
   .word { display: flex; gap: 26px; }
   .letter { display: flex; align-items: center; gap: 10px; }
-
-  .s {
-    background: #e8e8e8;
-    height: 10px;
-    border-radius: 5px;
-    opacity: 0;
-    transition: opacity .12s ease;
-  }
-
+  .s { background: #e8e8e8; height: 10px; border-radius: 5px; opacity: 0; transition: opacity .12s ease; }
   .s.dot { width: 10px; }
   .s.dash { width: 32px; }
   .s.on { opacity: 1; }
-
-  @media (max-width: 600px) {
-    .s { height: 7px; border-radius: 4px; }
-    .s.dot { width: 7px; }
-    .s.dash { width: 22px; }
-    .letter { gap: 7px; }
-    .word { gap: 18px; }
-    #stage { gap: 26px 44px; }
-  }
+  @media (max-width: 600px) { .s { height: 7px; border-radius: 4px; } .s.dot { width: 7px; } .s.dash { width: 22px; } .letter { gap: 7px; } .word { gap: 18px; } #stage { gap: 26px 44px; } }
 </style>
 </head>
-
 <body>
 <div id="stage"></div>
-
 <script>
 // CREATED BY CLAUDE!
+const CODE      = ".... --- ..-. ..-. . -. - .-.. .. -.-. .... / .. ... - / .- .-.. .-.. . ... / -... .- .-.. -.. / ...- --- .-. -... . .. .-.-.- .-.-.- .-.-.-";
+const FREQUENCY = 450;  
+const SPEED     = 20;    
+const VOLUME    = 1; 
+const PAUSE     = 1;    
+const SHOW_CODE = false; 
 
-const CODE = ".... --- ..-. ..-. . -. - .-.. .. -.-. .... / .. ... - / .- .-.. . ... / -... .- .-.. -.. / ...- --- .-. -... . .. .-.-.- .-.-.- .-.-.-";
-const FREQUENCY = 450;
-const SPEED = 20;
-const VOLUME = 1;
-const PAUSE = 1;
-const SHOW_CODE = true;
 
 const UNIT = 1200 / SPEED;
 const stage = document.getElementById("stage");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let actx = null;
-let started = false;
-
-try {
-  actx = new (window.AudioContext || window.webkitAudioContext)();
-} catch (e) {
-  console.error("AudioContext nicht verfügbar:", e);
-}
-
-// Audio beim Laden starten versuchen
-async function unlockAudio() {
-  if (!actx) return;
-
-  try {
-    await actx.resume();
-
-    if (actx.state === "running" && !started) {
-      started = true;
-      loop();
-    }
-  } catch (e) {
-    console.log("Audio konnte nicht gestartet werden:", e);
-  }
-}
-
-// Automatischer Startversuch
-unlockAudio();
-
-// Erneuter Versuch nach Nutzerinteraktion
+try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+function unlockAudio() { if (actx && actx.state !== "running") actx.resume(); }
 addEventListener("pointerdown", unlockAudio);
 addEventListener("keydown", unlockAudio);
 
 function beep(ms) {
   if (!actx || actx.state !== "running") return;
-
-  const t = actx.currentTime;
-  const d = ms / 1000;
-
-  const o = actx.createOscillator();
-  const g = actx.createGain();
-
-  o.frequency.value = FREQUENCY;
-  o.type = "sine";
-
+  const t = actx.currentTime, d = ms / 1000;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.frequency.value = FREQUENCY; o.type = "sine";
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(VOLUME, t + 0.01);
   g.gain.setValueAtTime(VOLUME, t + d - 0.015);
   g.gain.linearRampToValueAtTime(0, t + d);
-
-  o.connect(g);
-  g.connect(actx.destination);
-
-  o.start(t);
-  o.stop(t + d + 0.02);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t); o.stop(t + d + 0.02);
 }
 
 function build() {
   stage.innerHTML = "";
   const seq = [];
-
   CODE.split(" / ").forEach(w => {
-    const wEl = document.createElement("div");
-    wEl.className = "word";
-
+    const wEl = document.createElement("div"); wEl.className = "word";
     const letters = w.split(" ");
-
     letters.forEach((l, li) => {
-      const lEl = document.createElement("div");
-      lEl.className = "letter";
-
+      const lEl = document.createElement("div"); lEl.className = "letter";
       [...l].forEach((ch, ci) => {
         const s = document.createElement("span");
         s.className = "s " + (ch === "." ? "dot" : "dash");
-
         lEl.appendChild(s);
-
-        seq.push({
-          el: s,
-          dash: ch === "-",
-          lastInLetter: ci === l.length - 1,
-          lastInWord: li === letters.length - 1 && ci === l.length - 1
-        });
+        seq.push({ el: s, dash: ch === "-", lastInLetter: ci === l.length - 1, lastInWord: li === letters.length - 1 && ci === l.length - 1 });
       });
-
       wEl.appendChild(lEl);
     });
-
     stage.appendChild(wEl);
   });
-
   return seq;
 }
 
 async function loop() {
   while (true) {
     const seq = build();
-
     for (const [i, s] of seq.entries()) {
       const d = s.dash ? 3 * UNIT : UNIT;
-
       if (SHOW_CODE) s.el.classList.add("on");
-
       beep(d);
       await sleep(d);
-
       if (i === seq.length - 1) break;
-
       if (s.lastInWord) await sleep(7 * UNIT);
       else if (s.lastInLetter) await sleep(3 * UNIT);
       else await sleep(UNIT);
     }
-
     await sleep(PAUSE * 1000);
   }
 }
+loop();
 </script>
 </body>
 </html>
